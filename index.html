@@ -7,10 +7,10 @@
 </head>
 <body>
 
-<label for="categorySelect">Select Category:</label>
-<select id="categorySelect">
-    <!-- Populate options dynamically using JavaScript -->
-</select>
+<label>Select Categories:</label>
+<div id="categoryCheckboxes">
+    <!-- Populate checkboxes dynamically using JavaScript -->
+</div>
 
 <div id="postsContainer">
     <!-- Display posts dynamically using JavaScript -->
@@ -18,23 +18,39 @@
 
 <script>
 const apiURL = 'https://xarop.com';
-function fetchPostsByCategory(category) {
-    
+
+function fetchPostsByCategories(categories) {
+    // Ensure at least one category is selected
+    if (categories.length === 0) {
+        console.log('No categories selected.');
+        return;
+    }
+
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
                 var data = JSON.parse(xhr.responseText);
                 console.log('API Response:', data); // Log the API response
-                displayPosts(data);
+
+                // Filter posts that have all selected categories
+                var filteredPosts = data.filter(function(post) {
+                    return categories.every(function(categoryId) {
+                        return post.categories.some(function(postCategory) {
+                            return postCategory.id == categoryId;
+                        });
+                    });
+                });
+
+                displayPosts(filteredPosts);
             } else {
                 console.error('Error fetching posts:', xhr.statusText);
             }
         }
     };
-    
+
     // Replace the following URL with the correct endpoint
-    xhr.open('GET', apiURL+'/wp-json/custom/v1/posts/?categories=' + category, true);
+    xhr.open('GET', apiURL + '/wp-json/custom/v1/posts/?categories=' + categories.join(','), true);
     xhr.send();
 }
 
@@ -48,14 +64,17 @@ function displayPosts(posts) {
     }
 
     posts.forEach(function(post) {
-        var postHTML = '<div>';      
+        var postHTML = '<article>';
         postHTML += '<h2><a href="' + post.permalink + '">' + post.title + '</a></h2>';
+        postHTML += '<p>' + post.excerpt + '</p>';
         postHTML += '<p>Categories: ' + getCategoriesString(post.categories) + '</p>';
+        postHTML += '<p>Tags: ' + getTagsString(post.tags) + '</p>';
         postHTML += '<p>Date: ' + post.date + '</p>';
+        postHTML += '<p>Date Range: ' + post.date_start + ' -  ' + post.date_end + '</p>';
         // Check if excerpt.rendered exists before using it
         var excerpt = post.excerpt && post.excerpt.rendered ? post.excerpt.rendered : '';
         postHTML += '<p>' + excerpt + '</p>';
-        postHTML += '</div>';
+        postHTML += '</article>';
 
         postsContainer.innerHTML += postHTML;
     });
@@ -67,41 +86,65 @@ function getCategoriesString(categories) {
     }).join(', ');
 }
 
-function populateCategoryOptions() {
+function getTagsString(tags) {
+    return tags ? tags.map(function(tag) {
+        return tag.name;
+    }).join(', ') : '';
+}
+
+function populateCategoryCheckboxes() {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
                 var categories = JSON.parse(xhr.responseText);
                 console.log('Categories:', categories); // Log the categories
-                var categorySelect = document.getElementById('categorySelect');
+                var categoryCheckboxes = document.getElementById('categoryCheckboxes');
 
                 categories.forEach(function(category) {
-                    var option = document.createElement('option');
-                    option.value = category.id;
-                    option.textContent = category.name;
-                    categorySelect.appendChild(option);
+                    var checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.name = 'categories';
+                    checkbox.value = category.id;
+                    checkbox.id = 'category' + category.id;
+                    checkbox.addEventListener('change', updateSelectedCategories);
+
+                    var label = document.createElement('label');
+                    label.htmlFor = 'category' + category.id;
+                    label.textContent = category.name;
+
+                    categoryCheckboxes.appendChild(checkbox);
+                    categoryCheckboxes.appendChild(label);
+                    categoryCheckboxes.appendChild(document.createElement('br'));
                 });
 
-                var selectedCategory = categorySelect.value;
-                fetchPostsByCategory(selectedCategory);
+                var selectedCategories = getSelectedCategories();
+                fetchPostsByCategories(selectedCategories);
             } else {
                 console.error('Error fetching categories:', xhr.statusText);
             }
         }
     };
-    
+
     // Replace the following URL with the correct endpoint
-    xhr.open('GET', apiURL+'/wp-json/wp/v2/categories', true);
+    xhr.open('GET', apiURL + '/wp-json/wp/v2/categories', true);
     xhr.send();
 }
 
-document.getElementById('categorySelect').addEventListener('change', function() {
-    var selectedCategory = this.value;
-    fetchPostsByCategory(selectedCategory);
-});
+function updateSelectedCategories() {
+    var selectedCategories = getSelectedCategories();
+    fetchPostsByCategories(selectedCategories);
+}
 
-populateCategoryOptions();
+function getSelectedCategories() {
+    var checkboxes = document.querySelectorAll('input[name="categories"]:checked');
+    var selectedCategories = Array.from(checkboxes).map(function(checkbox) {
+        return checkbox.value;
+    });
+    return selectedCategories;
+}
+
+populateCategoryCheckboxes();
 </script>
 
 </body>
