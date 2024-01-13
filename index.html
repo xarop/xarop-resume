@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom REST API Demo</title>
+</head>
+<body>
+
+<label for="categorySelect">Select Category:</label>
+<select id="categorySelect">
+    <!-- Populate options dynamically using JavaScript -->
+</select>
+
+<div id="postsContainer">
+    <!-- Display posts dynamically using JavaScript -->
+</div>
+
+<script>
+const apiURL = 'https://xarop.com';
+function fetchPostsByCategory(category) {
+    
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                console.log('API Response:', data); // Log the API response
+                displayPosts(data);
+            } else {
+                console.error('Error fetching posts:', xhr.statusText);
+            }
+        }
+    };
+    
+    // Replace the following URL with the correct endpoint
+    xhr.open('GET', apiURL+'/wp-json/custom/v1/posts/?categories=' + category, true);
+    xhr.send();
+}
+
+function displayPosts(posts) {
+    var postsContainer = document.getElementById('postsContainer');
+    postsContainer.innerHTML = '';
+
+    if (posts.length === 0) {
+        postsContainer.innerHTML = '<p>No posts found.</p>';
+        return;
+    }
+
+    posts.forEach(function(post) {
+        var postHTML = '<div>';      
+        postHTML += '<h2><a href="' + post.permalink + '">' + post.title + '</a></h2>';
+        postHTML += '<p>Categories: ' + getCategoriesString(post.categories) + '</p>';
+        postHTML += '<p>Date: ' + post.date + '</p>';
+        // Check if excerpt.rendered exists before using it
+        var excerpt = post.excerpt && post.excerpt.rendered ? post.excerpt.rendered : '';
+        postHTML += '<p>' + excerpt + '</p>';
+        postHTML += '</div>';
+
+        postsContainer.innerHTML += postHTML;
+    });
+}
+
+function getCategoriesString(categories) {
+    return categories.map(function(category) {
+        return category.name;
+    }).join(', ');
+}
+
+function populateCategoryOptions() {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                var categories = JSON.parse(xhr.responseText);
+                console.log('Categories:', categories); // Log the categories
+                var categorySelect = document.getElementById('categorySelect');
+
+                categories.forEach(function(category) {
+                    var option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    categorySelect.appendChild(option);
+                });
+
+                var selectedCategory = categorySelect.value;
+                fetchPostsByCategory(selectedCategory);
+            } else {
+                console.error('Error fetching categories:', xhr.statusText);
+            }
+        }
+    };
+    
+    // Replace the following URL with the correct endpoint
+    xhr.open('GET', apiURL+'/wp-json/wp/v2/categories', true);
+    xhr.send();
+}
+
+document.getElementById('categorySelect').addEventListener('change', function() {
+    var selectedCategory = this.value;
+    fetchPostsByCategory(selectedCategory);
+});
+
+populateCategoryOptions();
+</script>
+
+</body>
+</html>
