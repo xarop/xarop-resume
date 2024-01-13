@@ -1,151 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom REST API Demo</title>
 </head>
+
 <body>
 
-<label>Select Categories:</label>
-<div id="categoryCheckboxes">
-    <!-- Populate checkboxes dynamically using JavaScript -->
-</div>
+    <!-- Section to Display Posts from Category 3 -->
+    <section id="postsCategory2">
+        <!-- Display posts from category 3 -->
+    </section>
 
-<div id="postsContainer">
-    <!-- Display posts dynamically using JavaScript -->
-</div>
+    <section id="postsCategory3">
+        <!-- Display posts from category 3 -->
+    </section>
 
-<script>
-const apiURL = 'https://xarop.com';
 
-function fetchPostsByCategories(categories) {
-    // Ensure at least one category is selected
-    if (categories.length === 0) {
-        console.log('No categories selected.');
-        return;
-    }
 
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-            if (xhr.status === 200) {
-                var data = JSON.parse(xhr.responseText);
-                console.log('API Response:', data); // Log the API response
 
-                // Filter posts that have all selected categories
-                var filteredPosts = data.filter(function(post) {
-                    return categories.every(function(categoryId) {
-                        return post.categories.some(function(postCategory) {
-                            return postCategory.id == categoryId;
+    <!-- Categories Selection Section -->
+    <label>Select Categories:</label>
+    <div id="categoryCheckboxes">
+        <!-- Populate checkboxes dynamically using JavaScript -->
+    </div>
+
+    <!-- Main Section to Display Posts Based on Selected Categories -->
+    <section id="postsSection">
+        <!-- Display posts based on selected categories using JavaScript -->
+    </section>
+
+    <!-- JavaScript Section -->
+    <script>
+        const apiURL = 'https://xarop.com';
+        let selectedCategoryNames = [];
+
+        function fetchPostsByCategories(categories, containerId) {
+            // Ensure at least one category is selected
+            if (categories.length === 0) {
+                console.log('No categories selected.');
+                return;
+            }
+
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        var data = JSON.parse(xhr.responseText);
+                        console.log('API Response:', data); // Log the API response
+
+                        // Filter posts that have all selected categories
+                        var filteredPosts = data.filter(function (post) {
+                            return categories.every(function (categoryId) {
+                                return post.categories.some(function (postCategory) {
+                                    return postCategory.id == categoryId;
+                                });
+                            });
                         });
-                    });
-                });
 
-                displayPosts(filteredPosts);
-            } else {
-                console.error('Error fetching posts:', xhr.statusText);
-            }
+                        // Display posts in the specified container
+                        displayPosts(filteredPosts, containerId, selectedCategoryNames);
+                    } else {
+                        console.error('Error fetching posts:', xhr.statusText);
+                    }
+                }
+            };
+
+            // Replace the following URL with the correct endpoint
+            xhr.open('GET', apiURL + '/wp-json/custom/v1/posts/?categories=' + categories.join(','), true);
+            xhr.send();
         }
-    };
 
-    // Replace the following URL with the correct endpoint
-    xhr.open('GET', apiURL + '/wp-json/custom/v1/posts/?categories=' + categories.join(','), true);
-    xhr.send();
-}
+        function displayPosts(posts, containerId, categoryNames) {
+            var postsContainer = document.getElementById(containerId);
+            postsContainer.innerHTML = '';
 
-function displayPosts(posts) {
-    var postsContainer = document.getElementById('postsContainer');
-    postsContainer.innerHTML = '';
-
-    if (posts.length === 0) {
-        postsContainer.innerHTML = '<p>No posts found.</p>';
-        return;
-    }
-
-    posts.forEach(function(post) {
-        var postHTML = '<article>';
-        postHTML += '<h2><a href="' + post.permalink + '">' + post.title + '</a></h2>';
-        postHTML += '<p>' + post.excerpt + '</p>';
-        postHTML += '<p>Categories: ' + getCategoriesString(post.categories) + '</p>';
-        postHTML += '<p>Tags: ' + getTagsString(post.tags) + '</p>';
-        postHTML += '<p>Date: ' + post.date + '</p>';
-        postHTML += '<p>Date Range: ' + post.date_start + ' -  ' + post.date_end + '</p>';
-        // Check if excerpt.rendered exists before using it
-        var excerpt = post.excerpt && post.excerpt.rendered ? post.excerpt.rendered : '';
-        postHTML += '<p>' + excerpt + '</p>';
-        postHTML += '</article>';
-
-        postsContainer.innerHTML += postHTML;
-    });
-}
-
-function getCategoriesString(categories) {
-    return categories.map(function(category) {
-        return category.name;
-    }).join(', ');
-}
-
-function getTagsString(tags) {
-    return tags ? tags.map(function(tag) {
-        return tag.name;
-    }).join(', ') : '';
-}
-
-function populateCategoryCheckboxes() {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-            if (xhr.status === 200) {
-                var categories = JSON.parse(xhr.responseText);
-                console.log('Categories:', categories); // Log the categories
-                var categoryCheckboxes = document.getElementById('categoryCheckboxes');
-
-                categories.forEach(function(category) {
-                    var checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.name = 'categories';
-                    checkbox.value = category.id;
-                    checkbox.id = 'category' + category.id;
-                    checkbox.addEventListener('change', updateSelectedCategories);
-
-                    var label = document.createElement('label');
-                    label.htmlFor = 'category' + category.id;
-                    label.textContent = category.name;
-
-                    categoryCheckboxes.appendChild(checkbox);
-                    categoryCheckboxes.appendChild(label);
-                    categoryCheckboxes.appendChild(document.createElement('br'));
-                });
-
-                var selectedCategories = getSelectedCategories();
-                fetchPostsByCategories(selectedCategories);
-            } else {
-                console.error('Error fetching categories:', xhr.statusText);
+            if (posts.length === 0) {
+                postsContainer.innerHTML = '<p>No posts found.</p>';
+                return;
             }
+
+            var categoryName = categoryNames.join(', ');
+            var postHTML = '<h3>' + categoryName + '</h3>';
+
+            posts.forEach(function (post) {
+                postHTML += '<article>';
+                postHTML += '<h2><a href="' + post.permalink + '">' + post.title + '</a></h2>';
+                postHTML += '<p>' + post.excerpt + '</p>';
+                postHTML += '<p>Categories: ' + getCategoriesString(post.categories) + '</p>';
+                postHTML += '<p>Tags: ' + getTagsString(post.tags) + '</p>';
+                postHTML += '<p>Date: ' + post.date + '</p>';
+                postHTML += '<p>Date Range: ' + post.date_start + ' -  ' + post.date_end + '</p>';
+                // Check if excerpt.rendered exists before using it
+                var excerpt = post.excerpt && post.excerpt.rendered ? post.excerpt.rendered : '';
+                postHTML += '<p>' + excerpt + '</p>';
+                postHTML += '</article>';
+            });
+
+            postsContainer.innerHTML = postHTML;
         }
-    };
 
-    // Replace the following URL with the correct endpoint
-    xhr.open('GET', apiURL + '/wp-json/wp/v2/categories', true);
-    xhr.send();
-}
+        // Function to populate category checkboxes
+        function populateCategoryCheckboxes() {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        var categories = JSON.parse(xhr.responseText);
+                        console.log('Categories:', categories); // Log the categories
+                        var categoryCheckboxes = document.getElementById('categoryCheckboxes');
 
-function updateSelectedCategories() {
-    var selectedCategories = getSelectedCategories();
-    fetchPostsByCategories(selectedCategories);
-}
+                        categories.forEach(function (category) {
+                            var checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.name = 'categories';
+                            checkbox.value = category.id;
+                            checkbox.id = 'category' + category.id;
+                            checkbox.addEventListener('change', updateSelectedCategories);
 
-function getSelectedCategories() {
-    var checkboxes = document.querySelectorAll('input[name="categories"]:checked');
-    var selectedCategories = Array.from(checkboxes).map(function(checkbox) {
-        return checkbox.value;
-    });
-    return selectedCategories;
-}
+                            var label = document.createElement('label');
+                            label.htmlFor = 'category' + category.id;
+                            label.textContent = category.name;
 
-populateCategoryCheckboxes();
-</script>
+                            categoryCheckboxes.appendChild(checkbox);
+                            categoryCheckboxes.appendChild(label);
+                            categoryCheckboxes.appendChild(document.createElement('br'));
+                        });
+
+                        // Automatically select the checkbox for a specific category (e.g., category with ID 3)
+                        var specificCategoryId = 3;
+                        var specificCheckbox = document.getElementById('category' + specificCategoryId);
+                        if (specificCheckbox) {
+                            specificCheckbox.checked = true;
+                            updateSelectedCategories();
+                        } else {
+                            console.warn('Checkbox for specific category not found.');
+                        }
+                    } else {
+                        console.error('Error fetching categories:', xhr.statusText);
+                    }
+                }
+            };
+
+            // Replace the following URL with the correct endpoint
+            xhr.open('GET', apiURL + '/wp-json/wp/v2/categories', true);
+            xhr.send();
+        }
+
+        // Function to update selected categories and fetch posts
+       // Function to update selected categories and fetch posts
+        function updateSelectedCategories() {
+            selectedCategoryNames = getSelectedCategoryNames();
+            var selectedCategories = getSelectedCategories();
+
+            // Update the posts for the main section
+            fetchPostsByCategories(selectedCategories, 'postsSection');
+
+            // Note: Exclude the update for 'postsCategory2'
+            // Do not call fetchPostsByCategories([2], 'postsCategory2');
+            
+            // Update the posts for the 'postsCategory3' section
+            fetchPostsByCategories([3], 'postsCategory3');
+        }
+
+
+        // Function to get selected category names
+        function getSelectedCategoryNames() {
+            var checkboxes = document.querySelectorAll('input[name="categories"]:checked');
+            var selectedCategoryNames = Array.from(checkboxes).map(function (checkbox) {
+                return checkbox.nextElementSibling.textContent;
+            });
+            return selectedCategoryNames;
+        }
+
+        // Function to get selected categories
+        function getSelectedCategories() {
+            var checkboxes = document.querySelectorAll('input[name="categories"]:checked');
+            var selectedCategories = Array.from(checkboxes).map(function (checkbox) {
+                return checkbox.value;
+            });
+            return selectedCategories;
+        }
+
+        // Function to get categories as a comma-separated string
+        function getCategoriesString(categories) {
+            return categories.map(function (category) {
+                return category.name;
+            }).join(', ');
+        }
+
+        // Function to get tags as a comma-separated string
+        function getTagsString(tags) {
+            return tags ? tags.map(function (tag) {
+                return tag.name;
+            }).join(', ') : '';
+        }
+
+        // Initialize category checkboxes on page load
+        populateCategoryCheckboxes();
+    </script>
 
 </body>
+
 </html>
